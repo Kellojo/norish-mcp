@@ -95,15 +95,60 @@ npm start
 
 The server starts on `http://localhost:<PORT>` with the MCP endpoint at `POST /mcp`.
 
-## Docker
+## Docker (Recommended)
 
-Build and run via Docker Compose:
+The easiest way to run this server is with Docker Compose using the official image:
 
-```bash
-docker compose up --build -d
+```yaml
+# docker-compose.yml
+services:
+  norish-mcp:
+    image: ghcr.io/kellojo/norish-mcp:latest
+    container_name: norish-mcp
+    ports:
+      - "3001:3001"
+    env_file: .env
 ```
 
-For production, set your environment variables in `.env` (or pass them through docker-compose overrides) — the compose file reads `NORISH_API_KEY` from an external env source.
+Create a `.env` file in the same directory:
+
+```bash
+NORISH_API_URL=https://your-norish-instance.com:6002
+NORISH_API_KEY=your-api-key-here
+MCP_API_KEY=your-secret-mcp-key
+PORT=3001
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+```
+
+The server will be available at `http://localhost:3001` with the MCP endpoint at `POST /mcp`.
+
+### Running Directly
+
+Pull and run without Docker Compose:
+
+```bash
+docker pull ghcr.io/kellojo/norish-mcp:latest
+
+docker run -d \
+  --name norish-mcp \
+  -p 3001:3001 \
+  --env-file .env \
+  ghcr.io/kellojo/norish-mcp:latest
+```
+
+### Building from Source
+
+If you prefer to build locally:
+
+```bash
+docker compose build
+docker compose up -d
+```
 
 ## Authentication
 
