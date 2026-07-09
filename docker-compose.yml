@@ -1,0 +1,17 @@
+services:
+  norish-mcp:
+    build: .
+    container_name: norish-mcp
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NORISH_API_URL=http://norish-web:6002
+      - NORISH_API_KEY=${NORISH_API_KEY}
+    networks:
+      - norish-network
+    restart: unless-stopped
+
+networks:
+  norish-network:
+    external: true
