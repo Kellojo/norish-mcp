@@ -570,7 +570,9 @@ server.registerTool(
   }
 );
 
-const app = createMcpExpressApp();
+const ALLOWED_HOSTS = process.env.ALLOWED_HOSTS?.split(',') || ['meals.mcp.nashor.cloud'];
+
+const app = createMcpExpressApp({ allowedHosts: ALLOWED_HOSTS });
 app.use(authMiddleware);
 
 app.post("/mcp", async (req, res) => {
