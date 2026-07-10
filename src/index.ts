@@ -8,13 +8,18 @@ import { z } from "zod/v4";
 import { norishFetch } from "./api.js";
 
 const MCP_API_KEY = process.env.MCP_API_KEY;
+const AUTH_ENABLED = process.env.MCP_AUTH_ENABLED !== "false";
 
-if (!MCP_API_KEY) {
+if (AUTH_ENABLED && !MCP_API_KEY) {
   console.error("MCP_API_KEY environment variable is required for authentication");
   process.exit(1);
 }
 
 function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (!AUTH_ENABLED) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.writeHead(401).end(JSON.stringify({
@@ -630,6 +635,7 @@ const PORT = parseInt(process.env.PORT || "3001");
 http.createServer(app).listen(PORT, () => {
   console.log(`Norish MCP Server running on http://localhost:${PORT}`);
   console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
+  console.log(AUTH_ENABLED ? `Authentication is enabled.` : `Authentication is disabled - no API key required.`);
 });
 
 process.on("SIGINT", async () => {

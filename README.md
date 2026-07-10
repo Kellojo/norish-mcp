@@ -9,42 +9,47 @@ Connect your LLM client to your personal Norish instance for recipe browsing, me
 This server exposes the following tools:
 
 ### Recipes
-| Tool | Description |
-|------|-------------|
-| `get_recipe` | Get a recipe by ID with ingredients and cooking steps |
-| `list_recipes` | List recipes with optional search and pagination |
-| `create_recipe` | Create a new recipe directly with structured data |
-| `import_recipe_url` | Import a recipe from a URL (parses webpage) |
+
+| Tool                 | Description                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| `get_recipe`         | Get a recipe by ID with ingredients and cooking steps           |
+| `list_recipes`       | List recipes with optional search and pagination                |
+| `create_recipe`      | Create a new recipe directly with structured data               |
+| `import_recipe_url`  | Import a recipe from a URL (parses webpage)                     |
 | `import_recipe_text` | Import a recipe from pasted text (plain text, JSON-LD, or YAML) |
 
 ### Meal Planning
-| Tool | Description |
-|------|-------------|
-| `get_today_planned_recipes` | Get planned recipes for today |
-| `get_week_planned_recipes` | Get planned recipes for the current week |
-| `get_month_planned_recipes` | Get planned recipes for the current month |
-| `add_to_plan` | Add a recipe to your meal plan for a specific date and slot |
-| `remove_from_plan` | Remove a planned recipe item from your meal plan |
+
+| Tool                        | Description                                                 |
+| --------------------------- | ----------------------------------------------------------- |
+| `get_today_planned_recipes` | Get planned recipes for today                               |
+| `get_week_planned_recipes`  | Get planned recipes for the current week                    |
+| `get_month_planned_recipes` | Get planned recipes for the current month                   |
+| `add_to_plan`               | Add a recipe to your meal plan for a specific date and slot |
+| `remove_from_plan`          | Remove a planned recipe item from your meal plan            |
 
 ### Grocery List
-| Tool | Description |
-|------|-------------|
-| `grocery_list` | List all items in the shopping list |
-| `grocery_create` | Create a new grocery item |
-| `grocery_mark_done` | Mark a grocery item as done (checked off) |
-| `grocery_mark_undone` | Uncheck a previously checked-off grocery item |
-| `grocery_delete` | Delete a grocery item from the shopping list |
-| `grocery_assign_store` | Assign a grocery item to a specific store |
+
+| Tool                   | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `grocery_list`         | List all items in the shopping list           |
+| `grocery_create`       | Create a new grocery item                     |
+| `grocery_mark_done`    | Mark a grocery item as done (checked off)     |
+| `grocery_mark_undone`  | Uncheck a previously checked-off grocery item |
+| `grocery_delete`       | Delete a grocery item from the shopping list  |
+| `grocery_assign_store` | Assign a grocery item to a specific store     |
 
 ### Stores
-| Tool | Description |
-|------|-------------|
-| `list_stores` | List all stores |
+
+| Tool           | Description                                   |
+| -------------- | --------------------------------------------- |
+| `list_stores`  | List all stores                               |
 | `create_store` | Create a new store with name, color, and icon |
 
 ### System
-| Tool | Description |
-|------|-------------|
+
+| Tool           | Description                                             |
+| -------------- | ------------------------------------------------------- |
 | `health_check` | Check the Norish API health (DB, parser service status) |
 
 ## Prerequisites
@@ -71,12 +76,14 @@ Copy `.env.example` to `.env` and fill in the values:
 cp .env.example .env
 ```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NORISH_API_URL` | Yes | The URL of your running Norish instance (e.g. `https://meals.nashor.cloud:6002`) |
-| `NORISH_API_KEY` | Yes | Your API key from the Norish instance |
-| `MCP_API_KEY` | Yes | Secret key for authenticating requests to this MCP server. Clients must send it as a `Bearer` token in the `Authorization` header. |
-| `PORT` | No (default: 3001) | Port the MCP server listens on |
+| Variable         | Required           | Description                                                                                                                                      |
+| ---------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NORISH_API_URL` | Yes                | The URL of your running Norish instance (e.g. `https://meals.nashor.cloud:6002`)                                                                 |
+| `NORISH_API_KEY` | Yes                | Your API key from the Norish instance                                                                                                            |
+| `MCP_AUTH_ENABLED` | No (default: `true`) | Set to `"false"` to disable authentication entirely. When enabled, `MCP_API_KEY` is required.                  |
+| `MCP_API_KEY`    | Yes (when auth enabled)                | Secret key for authenticating requests to this MCP server. Clients must send it as a `Bearer` token in the `Authorization` header.               |
+| `ALLOWED_HOSTS`  | No                 | Comma-separated list of allowed hostnames for DNS rebinding protection (e.g., `"norish-mcp.my.domain"`). Defaults to `['norish-mcp.my.domain']`. |
+| `PORT`           | No (default: 3001) | Port the MCP server listens on                                                                                                                   |
 
 ### 3. Build and run
 
@@ -152,13 +159,15 @@ docker compose up -d
 
 ## Authentication
 
-The server requires a Bearer token on every request:
+By default, the server requires a Bearer token on every request:
 
 ```
 Authorization: Bearer <MCP_API_KEY>
 ```
 
 Requests without a valid token are rejected with a `401 Unauthorized` error before reaching the MCP handler. This prevents unauthenticated access when exposing the server publicly.
+
+To disable authentication (e.g., for local-only development), set `MCP_AUTH_ENABLED=false` in your `.env`. When disabled, no API key is required and clients can connect without an `Authorization` header.
 
 ## Client Configuration
 
