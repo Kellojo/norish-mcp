@@ -5,7 +5,13 @@ export interface ImportRecipeUrlInput {
   forceAI?: boolean;
 }
 
-export async function importRecipeByUrl(input: ImportRecipeUrlInput): Promise<string> {
+export interface ImportRecipeUrlResult {
+  recipeId: string;
+  status: "queued" | "exists";
+  recipe?: any | null;
+}
+
+export async function importRecipeByUrl(input: ImportRecipeUrlInput): Promise<ImportRecipeUrlResult> {
   return norishFetch("/api/v1/recipes/import/url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -131,11 +131,18 @@ server.registerTool(
       limit: z.number().optional(),
       cursor: z.number().optional(),
       search: z.string().optional(),
+      searchFields: z.array(z.enum(["title", "description", "ingredients", "steps", "tags"])).optional(),
+      tags: z.array(z.string()).optional(),
+      categories: z.array(z.enum(["Breakfast", "Lunch", "Dinner", "Snack"])).optional(),
+      filterMode: z.enum(["AND", "OR"]).optional(),
+      sortMode: z.enum(["titleAsc", "titleDesc", "dateAsc", "dateDesc", "none"]).optional(),
+      minRating: z.number().min(1).max(5).optional(),
+      maxCookingTime: z.number().int().min(1).optional(),
     },
   },
-  async ({ limit, cursor, search }) => {
+  async ({ limit, cursor, search, searchFields, tags, categories, filterMode, sortMode, minRating, maxCookingTime }) => {
     try {
-      const result = await listRecipes({ limit, cursor, search });
+      const result = await listRecipes({ limit, cursor, search, searchFields, tags, categories, filterMode, sortMode, minRating, maxCookingTime });
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -274,28 +281,56 @@ server.registerTool(
 server.registerTool(
   "create_recipe",
   {
-    description: "Create a new recipe directly with structured data.",
+    description: "Create a new recipe directly with structured data. Only the name is required.",
     inputSchema: {
       name: z.string().describe("Recipe name"),
       description: z.string().optional(),
-      servings: z.number().int().positive().describe("Number of servings"),
-      prepMinutes: z.number().int().nonnegative().optional(),
-      cookMinutes: z.number().int().nonnegative().optional(),
-      totalMinutes: z.number().int().nonnegative().optional(),
+      image: z.string().optional(),
+      url: z.string().optional(),
+      servings: z.number().int().optional(),
+      prepMinutes: z.number().int().optional(),
+      cookMinutes: z.number().int().optional(),
+      totalMinutes: z.number().int().optional(),
       notes: z.string().optional(),
-      systemUsed: z.enum(["metric", "us"]).describe("Unit system for measurements"),
-      calories: z.number().int().positive().optional(),
+      systemUsed: z.enum(["metric", "us"]).optional().describe("Unit system for measurements"),
+      calories: z.number().int().optional(),
       fat: z.string().optional(),
       carbs: z.string().optional(),
       protein: z.string().optional(),
-      categories: z.array(z.enum(["Breakfast", "Lunch", "Dinner", "Snack"])).describe("Meal categories"),
+      originCountry: z.string().optional(),
+      originCountryName: z.string().optional(),
+      originRegion: z.string().optional(),
+      provenanceNote: z.string().optional(),
+      dishColor: z.string().optional(),
+      categories: z.array(z.enum(["Breakfast", "Lunch", "Dinner", "Snack"])).optional().describe("Meal categories"),
+      tags: z.array(z.object({ name: z.string() })).optional(),
+      cuisines: z.array(z.string()).optional(),
+      steps: z.array(z.object({
+        step: z.string(),
+        order: z.number(),
+        systemUsed: z.enum(["metric", "us"]).optional(),
+        images: z.array(z.object({ image: z.string(), order: z.number().optional() })).optional(),
+        stepIngredients: z.array(z.object({ ingredientOrder: z.number(), share: z.number().optional(), order: z.number().optional() })).optional(),
+      })).optional(),
+      recipeIngredients: z.array(z.object({
+        ingredientId: z.string().optional(),
+        amount: z.number().optional(),
+        unit: z.string().optional(),
+        order: z.number(),
+        systemUsed: z.enum(["metric", "us"]).optional(),
+        ingredientName: z.string().optional(),
+      })).optional(),
+      images: z.array(z.object({ image: z.string(), order: z.number().optional(), generated: z.boolean().optional() })).optional(),
+      videos: z.array(z.object({ video: z.string(), thumbnail: z.string().optional(), duration: z.number().optional(), order: z.number().optional() })).optional(),
+      id: z.string().optional(),
+      version: z.number().int().optional(),
     },
   },
   async (input) => {
     try {
       const result = await createRecipe(input);
       return {
-        content: [{ type: "text", text: `Successfully created recipe with ID: ${result.id}` }],
+        content: [{ type: "text", text: `Successfully created recipe with ID: ${result}` }],
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -319,8 +354,9 @@ server.registerTool(
   async ({ url, forceAI }) => {
     try {
       const result = await importRecipeByUrl({ url, forceAI });
+      const statusText = result.status === "exists" ? "recipe already exists" : "recipe import queued";
       return {
-        content: [{ type: "text", text: `Successfully queued recipe import. Recipe ID: ${result}` }],
+        content: [{ type: "text", text: `Successfully ${statusText}. Recipe ID: ${result.recipeId}` }],
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -384,15 +420,16 @@ server.registerTool(
   {
     description: "Create a new grocery item for the shopping list.",
     inputSchema: {
-      name: z.string().describe("Name of the grocery item"),
-      unit: z.string().describe("Unit of measurement (e.g., 'pcs', 'kg', 'g')"),
-      amount: z.number().positive().describe("Amount needed"),
+      name: z.string().optional().describe("Name of the grocery item"),
+      unit: z.string().optional().describe("Unit of measurement (e.g., 'pcs', 'kg', 'g')"),
+      amount: z.number().optional().describe("Amount needed"),
       isDone: z.boolean().optional(),
+      storeId: z.string().optional(),
     },
   },
-  async ({ name, unit, amount, isDone }) => {
+  async ({ name, unit, amount, isDone, storeId }) => {
     try {
-      const result = await createGrocery({ name, unit, amount, isDone });
+      const result = await createGrocery({ name, unit, amount, isDone, storeId });
       return {
         content: [{ type: "text", text: `Successfully created grocery item. ID: ${result.id}` }],
       };
@@ -499,16 +536,16 @@ server.registerTool(
 server.registerTool(
   "grocery_assign_store",
   {
-    description: "Assign a grocery item to a specific store.",
+    description: "Assign a grocery item to a specific store. Pass null for storeId to unassign.",
     inputSchema: {
       id: z.string().describe("Grocery item ID"),
-      storeId: z.string().optional(),
+      storeId: z.string().nullable().describe("Store ID to assign to, or null to unassign"),
       version: z.number().int().positive().describe("Version number for optimistic concurrency control"),
     },
   },
   async ({ id, storeId, version }) => {
     try {
-      const result = await assignGroceryToStore(id, { storeId: storeId ?? null, version });
+      const result = await assignGroceryToStore(id, { storeId, version });
       if (result.stale) {
         return {
           content: [{ type: "text", text: `Item assigned to store but a newer version exists. Please refresh and try again.` }],
@@ -556,12 +593,13 @@ server.registerTool(
     inputSchema: {
       name: z.string().describe("Store name"),
       color: z.enum(["primary", "secondary", "success", "warning", "danger", "slate", "sky", "violet"]).optional(),
-      icon: z.string().optional(),
+      website: z.string().optional(),
+      searchAddress: z.string().optional(),
     },
   },
-  async ({ name, color, icon }) => {
+  async ({ name, color, website, searchAddress }) => {
     try {
-      const result = await createStore({ name, color, icon });
+      const result = await createStore({ name, color, website, searchAddress });
       return {
         content: [{ type: "text", text: `Successfully created store with ID: ${result.id}` }],
       };

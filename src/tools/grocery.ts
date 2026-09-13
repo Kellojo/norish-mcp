@@ -18,9 +18,9 @@ export async function listGroceries(): Promise<GroceryItem[]> {
 }
 
 export interface CreateGroceryInput {
-  name: string;
-  unit: string;
-  amount: number;
+  name?: string | null;
+  unit?: string | null;
+  amount?: number | null;
   isDone?: boolean;
   storeId?: string | null;
 }
