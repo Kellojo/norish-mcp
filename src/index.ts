@@ -69,32 +69,33 @@ import {
 } from "./tools/grocery.js";
 import { listStores, createStore } from "./tools/stores.js";
 
-const server = new McpServer({
-  name: "norish-mcp",
-  version: "1.0.0",
-});
+function createMcpServer() {
+  const server = new McpServer({
+    name: "norish-mcp",
+    version: "1.0.0",
+  });
 
-server.registerTool(
-  "health_check",
-  {
-    description: "Check the Norish API health, including database and parser service status.",
-    inputSchema: {},
-  },
-  async () => {
-    try {
-      const result = await norishFetch("/health");
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [{ type: "text", text: `Error checking health: ${message}` }],
-        isError: true,
-      };
+  server.registerTool(
+    "health_check",
+    {
+      description: "Check the Norish API health, including database and parser service status.",
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const result = await norishFetch("/health");
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text", text: `Error checking health: ${message}` }],
+          isError: true,
+        };
+      }
     }
-  }
-);
+  );
 
 server.registerTool(
   "get_recipe",
@@ -613,6 +614,9 @@ server.registerTool(
   }
 );
 
+  return server;
+}
+
 const ALLOWED_HOSTS = process.env.ALLOWED_HOSTS?.split(',') || ['meals.mcp.nashor.cloud'];
 
 const app = createMcpExpressApp({ allowedHosts: ALLOWED_HOSTS });
@@ -620,6 +624,7 @@ app.use(authMiddleware);
 
 app.post("/mcp", async (req, res) => {
   try {
+    const server = createMcpServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     });
